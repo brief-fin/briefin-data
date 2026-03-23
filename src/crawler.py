@@ -44,7 +44,7 @@ def get_news_list(page_links: list[str]) -> list[dict]:
             continue
 
         press_list = [s.text.strip() for s in soup.find_all("span", {"class": "press"})]
-        datetime_list = [s.text.strip() for s in soup.find_all("span", {"class": "wdate"})]
+        date_list = [s.text.strip() for s in soup.find_all("span", {"class": "wdate"})]
         links = [a for a in news_list_div.find_all("a") if a.text.strip()]
 
         seen = []
@@ -57,11 +57,14 @@ def get_news_list(page_links: list[str]) -> list[dict]:
 
         for i, (title, href) in enumerate(news_urls):
             press = press_list[i] if i < len(press_list) else ""
-            dt_str = datetime_list[i] if i < len(datetime_list) else ""
-            try:
-                published_at = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
-            except ValueError:
-                published_at = None
+            dt_str = date_list[i] if i < len(date_list) else ""
+            published_at = None
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y.%m.%d %H:%M:%S", "%Y.%m.%d %H:%M", "%Y-%m-%d %H:%M", "%Y.%m.%d", "%Y-%m-%d"):
+                try:
+                    published_at = datetime.strptime(dt_str, fmt)
+                    break
+                except ValueError:
+                    continue
 
             articles.append({
                 "title": title,

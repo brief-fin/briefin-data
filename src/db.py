@@ -47,8 +47,6 @@ def is_similar_to_recent(conn, embedding: list[float], hours: int = 3, threshold
 
 
 def insert_news(conn, title: str, content: str, source: str, original_url: str, published_at) -> int | None:
-    if hasattr(published_at, "date"):
-        published_at = published_at.date()
 
     with conn.cursor() as cur:
         cur.execute(
