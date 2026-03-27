@@ -104,14 +104,15 @@ def get_article_content(finance_url: str) -> tuple[str, str]:
     return content.strip(), original_url
 
 
-def crawl(max_pages: int = 3, delay: float = 0.5, date: str = None) -> list[dict]:
-    """네이버 금융 메인뉴스 크롤링"""
+def crawl(max_pages: int = None, delay: float = 0.5, date: str = None) -> list[dict]:
+    """네이버 금융 메인뉴스 크롤링. max_pages=None이면 해당 날짜 전체 페이지"""
     if date is None:
         date = datetime.today().strftime("%Y-%m-%d")
     print(f"[crawler] 크롤링 날짜: {date}")
 
     page_links = get_page_links(date)
-    page_links = page_links[:max_pages]
+    if max_pages is not None:
+        page_links = page_links[:max_pages]
     print(f"[crawler] 페이지 수: {len(page_links)}")
 
     articles = get_news_list(page_links)

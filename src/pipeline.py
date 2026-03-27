@@ -6,7 +6,7 @@ from src import db
 SIMILARITY_THRESHOLD = 0.7
 
 
-def run(max_pages: int = 3, limit: int = None, date: str = None):
+def run(max_pages: int = None, limit: int = None, date: str = None):
     conn = db.get_connection()
 
     print(f"[pipeline] 네이버 경제 뉴스 크롤링 시작 ({max_pages}페이지)")
@@ -55,6 +55,7 @@ def run(max_pages: int = 3, limit: int = None, date: str = None):
 
         db.insert_news_embedding(conn, news_id, embedding)
         related_companies = summary.pop("related_companies", [])
+        summary.pop("title_ko", None)
         db.insert_news_summary(conn, news_id, **summary)
 
         saved += 1
