@@ -7,3 +7,4 @@ openai
 FlagEmbedding
 torch
 python-dotenv
+yfinance

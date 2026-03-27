@@ -76,14 +76,45 @@ def insert_news_embedding(conn, news_id: int, embedding: list[float]):
         conn.commit()
 
 
-def insert_news_summary(conn, news_id: int, summary_line: str, category: str, region: str):
+def upsert_overseas_company(conn, symbol: str, name: str) -> int:
+    """해외 기업을 companies 테이블에 upsert하고 id 반환. corp_code = ticker 사용"""
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO news_summaries (news_id, summary_line, category, region, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            INSERT INTO companies (ticker, name, corp_code, corp_name, is_overseas, is_watched, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, true, false, NOW(), NOW())
+            ON CONFLICT (corp_code) DO UPDATE SET updated_at = NOW()
+            RETURNING id
+            """,
+            (symbol, name, symbol, name),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        return row[0]
+
+
+def insert_news_company(conn, news_id: int, company_id: int, role: str = "PRIMARY"):
+    """news_companies 연결 테이블에 삽입"""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO news_companies (news_id, company_id, role)
+            VALUES (%s, %s, %s)
+            ON CONFLICT DO NOTHING
+            """,
+            (news_id, company_id, role),
+        )
+        conn.commit()
+
+
+def insert_news_summary(conn, news_id: int, summary_line: str, category: str, region: str, title_ko: str = None):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO news_summaries (news_id, summary_line, category, region, title_ko, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
             ON CONFLICT (news_id) DO NOTHING
             """,
-            (news_id, summary_line, category, region),
+            (news_id, summary_line, category, region, title_ko),
         )
         conn.commit()
