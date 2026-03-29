@@ -104,7 +104,9 @@ def crawl_ticker(ticker: str, max_pages: int = MAX_PAGES) -> list[dict]:
         stop = False
         for item in items:
             dt_obj, pub_str = parse_dt(item.get("dt", ""))
-            if dt_obj and dt_obj < START_DATE:
+            if dt_obj is None:
+                continue
+            if dt_obj < START_DATE:
                 stop = True
                 continue
 
