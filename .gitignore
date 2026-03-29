@@ -1,5 +1,10 @@
 /.env
 
+# 크롤링 데이터
+data/
+!data/kospi200_top50.json
+!data/nasdaq100.json
+
 # Python
 __pycache__/
 *.pyc
