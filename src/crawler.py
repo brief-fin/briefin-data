@@ -76,32 +76,36 @@ def get_news_list(page_links: list[str]) -> list[dict]:
     return articles
 
 
-def get_article_content(finance_url: str) -> tuple[str, str]:
-    """finance.naver.com 기사 URL → 리다이렉트 따라가서 본문 + 원본 URL 반환"""
+def get_article_content(finance_url: str) -> tuple[str, str, str]:
+    """finance.naver.com 기사 URL → 리다이렉트 따라가서 본문 + 원본 URL + 썸네일 URL 반환"""
     resp = requests.get(finance_url, headers=HEADERS)
     resp.raise_for_status()
 
     # 리다이렉트 URL 추출
     match = re.search(r"href='([^']*news\.naver\.com[^']*)'", resp.text)
     if not match:
-        return "", finance_url
+        return "", finance_url, ""
 
     original_url = match.group(1)
     resp2 = requests.get(original_url, headers=HEADERS)
     resp2.raise_for_status()
     soup = BeautifulSoup(resp2.text, "lxml")
 
+    # 썸네일: og:image
+    og_image = soup.select_one('meta[property="og:image"]')
+    thumbnail_url = og_image["content"] if og_image and og_image.get("content") else ""
+
     article = soup.find("article", {"class": "_article_content"})
     if not article:
         article = soup.select_one("#newsct_article") or soup.select_one("#articeBody")
     if not article:
-        return "", original_url
+        return "", original_url, thumbnail_url
 
     for tag in article.select("script, style, table"):
         tag.decompose()
 
     content = re.sub(r"\n{3,}", "\n\n", article.get_text(separator="\n", strip=True))
-    return content.strip(), original_url
+    return content.strip(), original_url, thumbnail_url
 
 
 def crawl(max_pages: int = None, delay: float = 0.5, date: str = None) -> list[dict]:
@@ -121,11 +125,12 @@ def crawl(max_pages: int = None, delay: float = 0.5, date: str = None) -> list[d
     results = []
     for article in articles:
         try:
-            content, original_url = get_article_content(article["finance_url"])
+            content, original_url, thumbnail_url = get_article_content(article["finance_url"])
             if not content:
                 continue
             article["content"] = content
             article["original_url"] = original_url
+            article["thumbnail_url"] = thumbnail_url
             del article["finance_url"]
             results.append(article)
             time.sleep(delay)

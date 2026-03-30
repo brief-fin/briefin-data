@@ -32,7 +32,7 @@ HEADERS = {
         "Chrome/120.0.0.0 Safari/537.36"
     )
 }
-FIELDNAMES = ["company", "title", "published_at", "original_url", "content"]
+FIELDNAMES = ["company", "title", "published_at", "original_url", "content", "source", "thumbnail_url"]
 DATE_FMTS  = ["%Y.%m.%d %H:%M", "%Y.%m.%d", "%Y-%m-%d %H:%M", "%Y-%m-%d"]
 
 
@@ -74,12 +74,16 @@ def get_tag_page(tag: str, page: int) -> list[dict]:
     return articles
 
 
-def get_article_content(url: str) -> str:
-    """기사 본문 추출"""
+def get_article_content(url: str) -> tuple[str, str]:
+    """기사 본문 + 썸네일 URL 추출"""
     try:
         resp = requests.get(url, headers=HEADERS, timeout=15)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.content, "lxml", from_encoding="utf-8")
+
+        # 썸네일: og:image
+        og_image = soup.select_one('meta[property="og:image"]')
+        thumbnail_url = og_image["content"] if og_image and og_image.get("content") else ""
 
         article = soup.select_one("#articletxt")
         if not article:
@@ -88,14 +92,15 @@ def get_article_content(url: str) -> str:
                 if article:
                     break
         if not article:
-            return ""
+            return "", thumbnail_url
 
         for tag in article.select("script, style, figure, .ad"):
             tag.decompose()
 
-        return re.sub(r"\n{3,}", "\n\n", article.get_text(separator="\n", strip=True)).strip()
+        content = re.sub(r"\n{3,}", "\n\n", article.get_text(separator="\n", strip=True)).strip()
+        return content, thumbnail_url
     except Exception:
-        return ""
+        return "", ""
 
 
 def crawl_company(company_name: str) -> list[dict]:
@@ -128,17 +133,19 @@ def crawl_company(company_name: str) -> list[dict]:
                 continue
             seen_urls.add(url)
 
-            content = get_article_content(url)
+            content, thumbnail_url = get_article_content(url)
             if not content:
                 print(f"  본문없음 skip: {item['title'][:40]}")
                 continue
 
             results.append({
-                "company":      company_name,
-                "title":        item["title"],
-                "published_at": item["published_at"],
-                "original_url": url,
-                "content":      content,
+                "company":       company_name,
+                "title":         item["title"],
+                "published_at":  item["published_at"],
+                "original_url":  url,
+                "content":       content,
+                "source":        "한국경제",
+                "thumbnail_url": thumbnail_url,
             })
             time.sleep(DELAY_SEC)
 

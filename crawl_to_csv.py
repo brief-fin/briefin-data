@@ -16,7 +16,7 @@ def iter_dates(start: date, end: date):
 
 
 with open(OUTPUT, "w", newline="", encoding="utf-8-sig") as f:
-    writer = csv.DictWriter(f, fieldnames=["title", "source", "published_at", "original_url", "content"])
+    writer = csv.DictWriter(f, fieldnames=["title", "source", "published_at", "original_url", "content", "thumbnail_url"])
     writer.writeheader()
     total_saved = 0
 
@@ -34,15 +34,16 @@ with open(OUTPUT, "w", newline="", encoding="utf-8-sig") as f:
             saved = 0
             for i, article in enumerate(articles, 1):
                 try:
-                    content, original_url = get_article_content(article["finance_url"])
+                    content, original_url, thumbnail_url = get_article_content(article["finance_url"])
                     if not content:
                         continue
                     writer.writerow({
-                        "title": article["title"],
-                        "source": article["source"],
-                        "published_at": article["published_at"],
-                        "original_url": original_url,
-                        "content": content,
+                        "title":         article["title"],
+                        "source":        article["source"],
+                        "published_at":  article["published_at"],
+                        "original_url":  original_url,
+                        "content":       content,
+                        "thumbnail_url": thumbnail_url,
                     })
                     f.flush()
                     saved += 1

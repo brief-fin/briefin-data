@@ -46,17 +46,17 @@ def is_similar_to_recent(conn, embedding: list[float], hours: int = 3, threshold
         return False, None
 
 
-def insert_news(conn, title: str, content: str, source: str, original_url: str, published_at) -> int | None:
+def insert_news(conn, title: str, content: str, source: str, original_url: str, published_at, thumbnail_url: str = "") -> int | None:
 
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO news (title, content, source, original_url, published_at, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+            INSERT INTO news (title, content, source, original_url, published_at, thumbnail_url, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
             ON CONFLICT (original_url) DO NOTHING
             RETURNING id
             """,
-            (title, content, source, original_url, published_at),
+            (title, content, source, original_url, published_at, thumbnail_url or None),
         )
         row = cur.fetchone()
         conn.commit()

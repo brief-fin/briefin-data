@@ -49,6 +49,7 @@ def run(max_pages: int = None, limit: int = None, date: str = None):
             source=article["source"],
             original_url=original_url,
             published_at=article["published_at"],
+            thumbnail_url=article.get("thumbnail_url", ""),
         )
         if not news_id:
             continue
