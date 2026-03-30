@@ -7,3 +7,5 @@ openai
 FlagEmbedding
 torch
 python-dotenv
+sumy
+kss

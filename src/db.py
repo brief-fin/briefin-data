@@ -25,25 +25,39 @@ def news_exists(conn, original_url: str) -> bool:
         return cur.fetchone() is not None
 
 
-def is_similar_to_recent(conn, embedding: list[float], hours: int = 3, threshold: float = 0.7) -> tuple[bool, str | None]:
-    """최근 N시간 이내 뉴스와 코사인 유사도 검사. threshold 이상이면 (True, 유사 뉴스 제목) 반환"""
+
+def fetch_unsummarized_news(conn) -> list[dict]:
+    """news_summaries가 없는 news 전체 조회 (published_at 오름차순)"""
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT n.title, 1 - (ne.embedding <=> %s) AS similarity
-            FROM news_embeddings ne
-            JOIN news n ON ne.news_id = n.id
-            WHERE n.created_at > NOW() - INTERVAL '1 hour' * %s
-              AND 1 - (ne.embedding <=> %s) >= %s
-            ORDER BY similarity DESC
-            LIMIT 1
-            """,
-            (np.array(embedding).flatten(), hours, np.array(embedding).flatten(), threshold),
+            SELECT n.id, n.title, n.content, n.published_at, n.original_url
+            FROM news n
+            LEFT JOIN news_summaries ns ON ns.news_id = n.id
+            WHERE ns.news_id IS NULL
+            ORDER BY n.published_at ASC
+            """
         )
-        row = cur.fetchone()
-        if row:
-            return True, f"{row[0][:40]} (유사도: {row[1]:.2f})"
-        return False, None
+        rows = cur.fetchall()
+    return [{"id": r[0], "title": r[1], "content": r[2], "published_at": r[3], "original_url": r[4]} for r in rows]
+
+
+def fetch_unembedded_news(conn) -> list[dict]:
+    """news_summaries는 있지만 news_embeddings가 없는 기사 조회 (published_at 오름차순)"""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT n.id, ns.summary_line
+            FROM news n
+            JOIN news_summaries ns ON ns.news_id = n.id
+            LEFT JOIN news_embeddings ne ON ne.news_id = n.id
+            WHERE ne.news_id IS NULL
+            ORDER BY n.published_at ASC
+            """
+        )
+        rows = cur.fetchall()
+    return [{"id": r[0], "summary_line": r[1]} for r in rows]
+
 
 
 def insert_news(conn, title: str, content: str, source: str, original_url: str, published_at) -> int | None:
@@ -87,3 +101,32 @@ def insert_news_summary(conn, news_id: int, summary_line: str, category: str, re
             (news_id, summary_line, category, region),
         )
         conn.commit()
+
+
+def insert_news_companies(conn, news_id: int, tickers: list[str]):
+    """GPT가 추출한 ticker를 companies 테이블과 매핑해 news_companies에 저장"""
+    if not tickers:
+        return
+
+    with conn.cursor() as cur:
+        for ticker in tickers:
+            cur.execute(
+                "SELECT id FROM companies WHERE ticker = %s LIMIT 1",
+                (ticker,),
+            )
+            row = cur.fetchone()
+            if not row:
+                continue
+
+            company_id = row[0]
+            cur.execute(
+                """
+                INSERT INTO news_companies (news_id, company_id, role)
+                VALUES (%s, %s, 'RELATED')
+                ON CONFLICT DO NOTHING
+                """,
+                (news_id, company_id),
+            )
+        conn.commit()
+
+
