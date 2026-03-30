@@ -42,7 +42,7 @@ HEADERS = {
     "Referer": "https://m.stock.naver.com/",
 }
 
-FIELDNAMES = ["company", "title", "published_at", "original_url", "content"]
+FIELDNAMES = ["company", "title", "published_at", "original_url", "content", "source", "thumbnail_url"]
 
 SYMBOL_MAP = {"BRK.B": "BRK_B.O"}
 
@@ -120,10 +120,12 @@ def crawl_ticker(ticker: str, max_pages: int = MAX_PAGES) -> list[dict]:
                 continue
 
             articles_meta.append({
-                "aid":          aid,
-                "title":        title,
-                "published_at": pub_str,
-                "url":          VIEW_URL.format(symbol=symbol, aid=aid),
+                "aid":           aid,
+                "title":         title,
+                "published_at":  pub_str,
+                "url":           VIEW_URL.format(symbol=symbol, aid=aid),
+                "source":        item.get("ohnm", "").strip(),
+                "thumbnail_url": item.get("thumbUrl") or "",
             })
 
         print(f"  [목록 p{page}] 누계 {len(articles_meta)}건")
@@ -156,11 +158,13 @@ def crawl_ticker(ticker: str, max_pages: int = MAX_PAGES) -> list[dict]:
                 continue
 
             results.append({
-                "company":      ticker,
-                "title":        meta["title"],
-                "published_at": meta["published_at"],
-                "original_url": meta["url"],
-                "content":      content,
+                "company":       ticker,
+                "title":         meta["title"],
+                "published_at":  meta["published_at"],
+                "original_url":  meta["url"],
+                "content":       content,
+                "source":        meta["source"],
+                "thumbnail_url": meta["thumbnail_url"],
             })
             time.sleep(DELAY_SEC)
 
