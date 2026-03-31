@@ -76,42 +76,47 @@ def get_news_list(page_links: list[str]) -> list[dict]:
     return articles
 
 
-def get_article_content(finance_url: str) -> tuple[str, str]:
-    """finance.naver.com 기사 URL → 리다이렉트 따라가서 본문 + 원본 URL 반환"""
+def get_article_content(finance_url: str) -> tuple[str, str, str]:
+    """finance.naver.com 기사 URL → 리다이렉트 따라가서 본문 + 원본 URL + 썸네일 URL 반환"""
     resp = requests.get(finance_url, headers=HEADERS)
     resp.raise_for_status()
 
     # 리다이렉트 URL 추출
     match = re.search(r"href='([^']*news\.naver\.com[^']*)'", resp.text)
     if not match:
-        return "", finance_url
+        return "", finance_url, ""
 
     original_url = match.group(1)
     resp2 = requests.get(original_url, headers=HEADERS)
     resp2.raise_for_status()
     soup = BeautifulSoup(resp2.text, "lxml")
 
+    # 썸네일: og:image
+    og_image = soup.select_one('meta[property="og:image"]')
+    thumbnail_url = og_image["content"] if og_image and og_image.get("content") else ""
+
     article = soup.find("article", {"class": "_article_content"})
     if not article:
         article = soup.select_one("#newsct_article") or soup.select_one("#articeBody")
     if not article:
-        return "", original_url
+        return "", original_url, thumbnail_url
 
     for tag in article.select("script, style, table"):
         tag.decompose()
 
     content = re.sub(r"\n{3,}", "\n\n", article.get_text(separator="\n", strip=True))
-    return content.strip(), original_url
+    return content.strip(), original_url, thumbnail_url
 
 
-def crawl(max_pages: int = 3, delay: float = 0.5, date: str = None) -> list[dict]:
-    """네이버 금융 메인뉴스 크롤링"""
+def crawl(max_pages: int = None, delay: float = 0.5, date: str = None) -> list[dict]:
+    """네이버 금융 메인뉴스 크롤링. max_pages=None이면 해당 날짜 전체 페이지"""
     if date is None:
         date = datetime.today().strftime("%Y-%m-%d")
     print(f"[crawler] 크롤링 날짜: {date}")
 
     page_links = get_page_links(date)
-    page_links = page_links[:max_pages]
+    if max_pages is not None:
+        page_links = page_links[:max_pages]
     print(f"[crawler] 페이지 수: {len(page_links)}")
 
     articles = get_news_list(page_links)
@@ -120,11 +125,12 @@ def crawl(max_pages: int = 3, delay: float = 0.5, date: str = None) -> list[dict
     results = []
     for article in articles:
         try:
-            content, original_url = get_article_content(article["finance_url"])
+            content, original_url, thumbnail_url = get_article_content(article["finance_url"])
             if not content:
                 continue
             article["content"] = content
             article["original_url"] = original_url
+            article["thumbnail_url"] = thumbnail_url
             del article["finance_url"]
             results.append(article)
             time.sleep(delay)

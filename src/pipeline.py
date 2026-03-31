@@ -70,6 +70,33 @@ def backfill_summarize():
     print(f"\n[backfill] 완료 — {done}건 요약")
 
 
+def backfill_companies():
+    """news_companies가 없는 뉴스(한국경제 제외)에 GPT로 category, 관련기업 추출 후 저장"""
+    conn = db.get_connection()
+
+    articles = db.fetch_news_without_companies(conn)
+    print(f"[backfill_companies] 대상: {len(articles)}건")
+
+    done = 0
+    for article in articles:
+        try:
+            result = classify_only(article["title"], article["content"] or "")
+        except Exception as e:
+            print(f"[backfill_companies] 오류 (id: {article['id']}): {e}")
+            continue
+
+        db.insert_news_companies(conn, article["id"], result["related_companies"])
+        db.update_news_summary_category(conn, article["id"], result["category"])
+
+        done += 1
+        print(f"[backfill_companies] {done}/{len(articles)} 완료: {article['title'][:40]}")
+        print(f"  category : {result['category']}")
+        print(f"  companies: {result['related_companies']}")
+
+    conn.close()
+    print(f"\n[backfill_companies] 완료 — {done}건 처리")
+
+
 def backfill_embed():
     """news_summaries는 있지만 news_embeddings가 없는 기사들을 summary_line으로 임베딩"""
     conn = db.get_connection()
@@ -91,7 +118,7 @@ def backfill_embed():
     print(f"\n[backfill] 완료 — {done}건 임베딩")
 
 
-def run(max_pages: int = 3, limit: int = None, date: str = None):
+def run(max_pages: int = None, limit: int = None, date: str = None):
     conn = db.get_connection()
 
     print(f"[pipeline] 네이버 경제 뉴스 크롤링 시작 ({max_pages}페이지)")
@@ -117,6 +144,7 @@ def run(max_pages: int = 3, limit: int = None, date: str = None):
             source=article["source"],
             original_url=original_url,
             published_at=article["published_at"],
+            thumbnail_url=article.get("thumbnail_url", ""),
         )
         if not news_id:
             continue
@@ -136,6 +164,7 @@ def run(max_pages: int = 3, limit: int = None, date: str = None):
             continue
 
         related_companies = summary.pop("related_companies", [])
+        summary.pop("title_ko", None)
         db.insert_news_summary(conn, news_id, **summary)
         db.insert_news_companies(conn, news_id, related_companies)
 
