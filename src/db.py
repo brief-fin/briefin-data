@@ -42,11 +42,10 @@ def fetch_unsummarized_news(conn) -> list[dict]:
     return [{"id": r[0], "title": r[1], "content": r[2], "published_at": r[3], "original_url": r[4]} for r in rows]
 
 
-def fetch_news_without_companies(conn) -> list[dict]:
+def fetch_news_without_companies(conn, limit: int = None, offset: int = 0) -> list[dict]:
     """category가 null인 뉴스 조회 (한국경제 제외)"""
     with conn.cursor() as cur:
-        cur.execute(
-            """
+        query = """
             SELECT n.id, n.title, ns.summary_line
             FROM news n
             JOIN news_summaries ns ON ns.news_id = n.id
@@ -54,7 +53,11 @@ def fetch_news_without_companies(conn) -> list[dict]:
               AND n.source != '한국경제'
             ORDER BY n.published_at ASC
             """
-        )
+        if limit is not None:
+            query += f" LIMIT {limit} OFFSET {offset}"
+        elif offset:
+            query += f" OFFSET {offset}"
+        cur.execute(query)
         rows = cur.fetchall()
     return [{"id": r[0], "title": r[1], "content": r[2]} for r in rows]
 
@@ -68,11 +71,10 @@ def update_news_summary_category(conn, news_id: int, category: str):
         conn.commit()
 
 
-def fetch_unembedded_news(conn) -> list[dict]:
+def fetch_unembedded_news(conn, limit: int = None, offset: int = 0) -> list[dict]:
     """news_summaries는 있지만 news_embeddings가 없는 기사 조회 (published_at 오름차순)"""
     with conn.cursor() as cur:
-        cur.execute(
-            """
+        query = """
             SELECT n.id, ns.summary_line
             FROM news n
             JOIN news_summaries ns ON ns.news_id = n.id
@@ -80,7 +82,11 @@ def fetch_unembedded_news(conn) -> list[dict]:
             WHERE ne.news_id IS NULL
             ORDER BY n.published_at ASC
             """
-        )
+        if limit is not None:
+            query += f" LIMIT {limit} OFFSET {offset}"
+        elif offset:
+            query += f" OFFSET {offset}"
+        cur.execute(query)
         rows = cur.fetchall()
     return [{"id": r[0], "summary_line": r[1]} for r in rows]
 

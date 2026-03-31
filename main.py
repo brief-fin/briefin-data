@@ -9,13 +9,14 @@ if __name__ == "__main__":
     parser.add_argument("--pages", type=int, default=1, help="크롤링 페이지 수 (기본: 1)")
     parser.add_argument("--date", type=str, default=None, help="크롤링 날짜 (YYYY-MM-DD, 기본: 오늘)")
     parser.add_argument("--limit", type=int, default=None, help="처리할 뉴스 최대 개수 (기본: 제한 없음)")
+    parser.add_argument("--offset", type=int, default=0, help="처리 시작 위치 (기본: 0)")
     args = parser.parse_args()
 
     if args.backfill:
         run_backfill_summarize()
     elif args.backfill_embed:
-        run_backfill()
+        run_backfill(limit=args.limit, offset=args.offset)
     elif args.backfill_companies:
-        run_backfill_companies()
+        run_backfill_companies(limit=args.limit, offset=args.offset)
     else:
         run_pipeline(max_pages=args.pages, limit=args.limit, date=args.date)
