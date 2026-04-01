@@ -1,0 +1,19 @@
+/.env
+
+# 크롤링 데이터
+data/
+!data/kospi200_top50.json
+!data/nasdaq100.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 모델 캐시 (bge-m3 로컬 다운로드 파일)
+.cache/
+models/
+
+.claude/

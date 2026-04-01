@@ -1,0 +1,14 @@
+requests
+beautifulsoup4
+lxml
+psycopg2-binary
+pgvector
+openai
+FlagEmbedding
+torch
+python-dotenv
+sumy
+kss
+yfinance
+playwright
+apscheduler
