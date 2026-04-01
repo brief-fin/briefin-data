@@ -5,6 +5,8 @@ psycopg2-binary
 pgvector
 openai
 FlagEmbedding
+transformers==4.46.3
+tokenizers>=0.20,<0.21
 python-dotenv
 sumy
 kss
