@@ -7,10 +7,8 @@ openai
 FlagEmbedding
 torch
 python-dotenv
-<<<<<<< HEAD
 sumy
 kss
-=======
 yfinance
 playwright
->>>>>>> 845dd8e5ff33042363e9d3835f80ff9231d9bd82
+apscheduler

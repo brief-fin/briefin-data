@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import numpy as np
 import psycopg2
 from pgvector.psycopg2 import register_vector
@@ -17,6 +18,22 @@ def get_connection():
     )
     register_vector(conn)
     return conn
+
+
+def get_latest_published_at(conn, source: str = None, url_pattern: str = None) -> datetime | None:
+    """DB에 저장된 가장 최근 published_at 반환. 없으면 None
+    source: 특정 source만 필터 (예: '한국경제')
+    url_pattern: LIKE 패턴으로 URL 필터 (예: '%news.naver.com%')
+    """
+    with conn.cursor() as cur:
+        if source:
+            cur.execute("SELECT MAX(published_at) FROM news WHERE source = %s", (source,))
+        elif url_pattern:
+            cur.execute("SELECT MAX(published_at) FROM news WHERE original_url LIKE %s", (url_pattern,))
+        else:
+            cur.execute("SELECT MAX(published_at) FROM news")
+        row = cur.fetchone()
+        return row[0] if row and row[0] else None
 
 
 def news_exists(conn, original_url: str) -> bool:
