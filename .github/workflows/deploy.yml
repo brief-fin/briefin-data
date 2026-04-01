@@ -1,0 +1,41 @@
+name: Deploy Scheduler
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: EC2 배포
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 30m
+          script: |
+            cd /home/ubuntu/briefin-data
+
+            git pull origin main
+
+            # .env 덮어쓰기
+            cat > .env << 'EOF'
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=5432
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            EOF
+
+            docker build -t briefin-scheduler .
+            docker stop briefin-scheduler || true
+            docker rm briefin-scheduler || true
+            docker run -d \
+              --name briefin-scheduler \
+              --restart unless-stopped \
+              -v /home/ubuntu/briefin-data/.env:/app/.env \
+              briefin-scheduler
