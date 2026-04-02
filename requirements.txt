@@ -13,3 +13,4 @@ kss
 yfinance
 playwright
 apscheduler
+

@@ -216,8 +216,18 @@ def run_all():
 
 if __name__ == "__main__":
     scheduler = BlockingScheduler(timezone="Asia/Seoul")
-    scheduler.add_job(run_all, "cron", minute=0)  # 매 정각
-    log.info("스케줄러 시작 — 매 정각 실행")
+
+    # 장 중 (09:00~15:30) — 30분 간격
+    scheduler.add_job(run_all, "cron", hour="9-15", minute="0,30")
+    # 장 마감 후 (16:00~18:00) — 1시간 간격
+    scheduler.add_job(run_all, "cron", hour="16,17,18", minute=0)
+    # 야간/새벽 (21:00, 00:00, 03:00, 06:00) — 3시간 간격
+    scheduler.add_job(run_all, "cron", hour="21,0,3,6", minute=0)
+
+    log.info("스케줄러 시작")
+    log.info("  장 중    09:00~15:30 → 30분 간격")
+    log.info("  장 마감  16:00~18:00 → 1시간 간격")
+    log.info("  야간     21:00/00:00/03:00/06:00 → 3시간 간격")
 
     # 시작 시 즉시 1회 실행
     run_all()
