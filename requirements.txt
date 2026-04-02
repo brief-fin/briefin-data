@@ -5,7 +5,12 @@ psycopg2-binary
 pgvector
 openai
 FlagEmbedding
-torch
+transformers==4.46.3
+tokenizers>=0.20,<0.21
 python-dotenv
+sumy
+kss
 yfinance
 playwright
+apscheduler
+
